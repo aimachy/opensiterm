@@ -147,13 +147,15 @@ def start_daemon(cfg: dict, timeout: float = 15.0) -> dict:
                       env=env, close_fds=True)
         cmd = daemon_command(cfg_path)
         if os.name == "nt":
-            # Detach from the agent's console and process group so the session outlives the
-            # command that started it; break away from the job object when the host allows it.
-            detached, new_group, breakaway = 0x00000008, 0x00000200, 0x01000000
+            # Give the session its own hidden console and process group, so it outlives the
+            # command that started it without showing a window; break away from the job
+            # object when the host allows it. (Not DETACHED_PROCESS: a venv python.exe is a
+            # launcher, and its console child would then get a new, visible console window.)
+            no_window, new_group, breakaway = 0x08000000, 0x00000200, 0x01000000
             try:
-                proc = subprocess.Popen(cmd, creationflags=detached | new_group | breakaway, **kwargs)
+                proc = subprocess.Popen(cmd, creationflags=no_window | new_group | breakaway, **kwargs)
             except OSError:
-                proc = subprocess.Popen(cmd, creationflags=detached | new_group, **kwargs)
+                proc = subprocess.Popen(cmd, creationflags=no_window | new_group, **kwargs)
         else:
             proc = subprocess.Popen(cmd, start_new_session=True, **kwargs)
 
