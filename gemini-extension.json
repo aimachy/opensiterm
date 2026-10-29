@@ -1,0 +1,11 @@
+{
+  "name": "opensiterm",
+  "version": "0.1.0",
+  "description": "Serial port access (UART/COM/tty) for hardware debugging: the opensiterm skill plus its MCP server. Requires the opensiterm CLI (pipx install opensiterm, or a release binary).",
+  "mcpServers": {
+    "opensiterm": {
+      "command": "opensiterm",
+      "args": ["mcp"]
+    }
+  }
+}

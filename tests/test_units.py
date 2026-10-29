@@ -1,8 +1,10 @@
+import json
 import re
+from pathlib import Path
 
 import pytest
 
-from opensiterm import render, util
+from opensiterm import __version__, render, util
 from opensiterm.rules import RuleSet, build_rules
 from opensiterm.timeline import EVT, RX, TX, Timeline
 
@@ -177,6 +179,18 @@ def test_project_rules_and_disable(tmp_path):
     assert rs.check("MOTOR start").action == "deny"
     assert rs.check("mkfs.vfat /dev/sda1") is None
     assert rs.check("sf erase 0 10").name == "flash-erase"
+
+
+def test_packaging_manifests_are_consistent():
+    root = Path(__file__).resolve().parent.parent
+    gemini = json.loads((root / "gemini-extension.json").read_text(encoding="utf-8"))
+    assert gemini["name"] == "opensiterm" and gemini["version"] == __version__
+    assert gemini["mcpServers"]["opensiterm"] == {"command": "opensiterm", "args": ["mcp"]}
+    market = json.loads((root / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+    plugin = json.loads((root / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8"))
+    assert market["plugins"][0]["name"] == plugin["name"] == "opensiterm"
+    skill = (root / "skills" / "opensiterm" / "SKILL.md").read_text(encoding="utf-8")
+    assert re.search(r"^name: opensiterm$", skill, re.M)
 
 
 def test_broken_config_keeps_builtins(tmp_path):

@@ -359,10 +359,13 @@ def skill_path() -> Path:
 
 
 SKILL_TARGETS = {
-    # Claude Code reads .claude/skills; Codex, opencode, oh-my-pi, Gemini/Antigravity read .agents/skills.
+    # Claude Code reads .claude/skills; Codex, opencode, oh-my-pi, Kimi, Crush, Gemini read .agents/skills
+    # (Kimi, Crush and opencode read both). Antigravity CLI's user-level skills live under ~/.gemini.
     "claude": (Path.home() / ".claude" / "skills", Path(".claude") / "skills"),
     "agents": (Path.home() / ".agents" / "skills", Path(".agents") / "skills"),
+    "antigravity": (Path.home() / ".gemini" / "antigravity-cli" / "skills", Path(".agents") / "skills"),
 }
+DEFAULT_SKILL_TARGETS = ("claude", "agents")
 
 
 def install_skill(targets: Optional[List[str]] = None, project: bool = False, dest: Optional[str] = None) -> Result:
@@ -370,7 +373,7 @@ def install_skill(targets: Optional[List[str]] = None, project: bool = False, de
     if dest:
         dirs = [Path(dest).expanduser()]
     else:
-        names = targets or list(SKILL_TARGETS)
+        names = targets or list(DEFAULT_SKILL_TARGETS)
         bad = [t for t in names if t not in SKILL_TARGETS]
         if bad:
             raise OpenSiTermError(f"unknown target(s) {bad}; choose from {list(SKILL_TARGETS)} or use --dest", "usage")
@@ -409,17 +412,24 @@ def setup() -> Result:
 1) Agent Skill - teaches agents that have a shell how to use opensiterm:
      opensiterm skill install
    (copies SKILL.md to ~/.claude/skills and ~/.agents/skills: Claude Code, Codex, opencode,
-    oh-my-pi, Gemini/Antigravity CLI. Or: npx skills add aimachy/opensiterm)
+    oh-my-pi, Kimi Code, Crush, Gemini CLI. Add --target antigravity for Antigravity CLI.
+    Or: npx skills add aimachy/opensiterm;  pi: pi install git:github.com/aimachy/opensiterm)
 
 2) MCP server - REQUIRED for Codex (its sandbox blocks serial devices and localhost for shell
    commands; MCP servers run outside it) and for chat apps without a shell:
      Claude Code : claude mcp add --transport stdio --scope user opensiterm -- {shell_cmd}
      Codex       : codex mcp add opensiterm -- {shell_cmd}
-     Gemini CLI  : gemini mcp add -s user opensiterm {shell_cmd}
+     Kimi Code   : kimi mcp add --transport stdio opensiterm -- {shell_cmd}
+     Gemini CLI  : gemini extensions install https://github.com/aimachy/opensiterm   (skill + MCP)
+     Qwen Code   : qwen extensions install https://github.com/aimachy/opensiterm     (skill + MCP)
      opencode    : merge into ~/.config/opencode/opencode.json:
                    {opencode_json}
      oh-my-pi    : merge into ~/.omp/agent/mcp.json:
                    {mcp_json}
+     Antigravity : merge into ~/.gemini/config/mcp_config.json:
+                   {mcp_json}
+     Crush       : add to ~/.config/crush/crushrc:
+                   mcp add opensiterm --command {q(exe)} --args {' '.join(args)}
      Others (Claude Desktop, Cherry Studio, DeepSeek clients, Cursor...): the standard form
                    {mcp_json}
 

@@ -92,13 +92,23 @@ opensiterm skill install   # copies SKILL.md to ~/.claude/skills/ and ~/.agents/
 | **Claude Code** | `opensiterm skill install`, or as a plugin: `/plugin marketplace add aimachy/opensiterm` then `/plugin install opensiterm@opensiterm` | optional: `claude mcp add --transport stdio --scope user opensiterm -- opensiterm mcp` |
 | **Codex CLI** | `opensiterm skill install` (reads `~/.agents/skills`) | **required:** `codex mcp add opensiterm -- opensiterm mcp` (see the note below) |
 | **opencode** | picked up from `~/.claude/skills` or `~/.agents/skills` | add to `~/.config/opencode/opencode.json`: `{"mcp": {"opensiterm": {"type": "local", "command": ["opensiterm", "mcp"]}}}` |
-| **oh-my-pi** | picked up from `~/.agents/skills` or `~/.claude/skills` | add to `~/.omp/agent/mcp.json`: `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
-| **Gemini CLI / Antigravity** | `~/.agents/skills` | `gemini mcp add -s user opensiterm opensiterm mcp` |
-| **DeepSeek** | DeepSeek recommends running its models inside Claude Code, opencode or Codex: follow those rows | DeepSeek Harness (`dsh`) supports stdio MCP servers in its Cordis config; see its MCP guide |
+| **pi** | `pi install git:github.com/aimachy/opensiterm` | not needed: pi has no MCP by design and drives the CLI through the skill |
+| **oh-my-pi** | `/marketplace add aimachy/opensiterm`, then `omp plugin install opensiterm@opensiterm` (or picked up from `~/.agents/skills`) | add to `~/.omp/agent/mcp.json`: `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
+| **Gemini CLI** | `gemini extensions install https://github.com/aimachy/opensiterm` installs both, as an extension | (included) |
+| **Qwen Code** | `qwen extensions install https://github.com/aimachy/opensiterm` (Qwen Code converts the Gemini extension) | (included) |
+| **Kimi Code CLI** | picked up from `~/.claude/skills` or `~/.agents/skills` | `kimi mcp add --transport stdio opensiterm -- opensiterm mcp` |
+| **Antigravity CLI** (`agy`) | `opensiterm skill install --target antigravity` | add to `~/.gemini/config/mcp_config.json`: `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
+| **Crush** | picked up from `~/.agents/skills` or `~/.claude/skills` | in `~/.config/crush/crushrc`: `mcp add opensiterm --command opensiterm --args mcp` |
+| **Grok Build** (xAI), **ZCode** (Z.ai), **DeepSeek Harness** (`dsh`) | these support Agent Skills and MCP; point them at `~/.agents/skills` or the MCP entry, per their docs | `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` or the tool's own equivalent |
 | **Chat apps** (Claude Desktop, Cherry Studio, Chatbox, Cursor, ...) | n/a | `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
 
 You can also install the skill with the cross-agent installer:
 `npx skills add aimachy/opensiterm`.
+
+> **Models vs. tools:** DeepSeek, Kimi, Qwen, GLM and Grok are *models*; the serial port is driven
+> by the *tool* (harness) that runs them. Any model works in any tool above. For example, DeepSeek,
+> Kimi K2 and GLM all officially support running inside Claude Code, opencode or Codex, so follow
+> that tool's row.
 
 > **Codex users:** Codex's sandbox hides serial devices and blocks localhost for shell commands on
 > Linux and macOS, so `opensiterm` shell calls fail inside it. MCP servers run outside the sandbox,
@@ -136,6 +146,40 @@ Output is compact and timestamped. `>>` marks what was sent and `##` marks an ev
 20:34:34.711 Linux buildroot 5.10.110 #1 SMP armv7l GNU/Linux
 20:34:34.712 ~ #
 ```
+
+## Example: debugging a board with Claude Code
+
+1. **Install and connect** (once):
+
+   ```bash
+   uv tool install git+https://github.com/aimachy/opensiterm   # or: pipx install git+https://...
+   opensiterm skill install     # skill goes to ~/.claude/skills/ and ~/.agents/skills/
+   ```
+
+   If `opensiterm` isn't found, run `uv tool update-shell` (or `pipx ensurepath`) and open a new
+   terminal. The executable lives in `~/.local/bin/`; on Windows that's
+   `C:\Users\<you>\.local\bin\opensiterm.exe`.
+
+2. **Restart Claude Code** in a new terminal and session, so the new PATH and the skill are loaded.
+
+3. **Free the port.** Close any serial terminal (MobaXterm, PuTTY, ...) connected to it, since a port
+   can only be open in one program. To watch along live, run `opensiterm watch` in another terminal.
+
+4. **Just ask in plain language**, for example:
+
+   > The board on COM7 runs Linux at 115200 baud. Check the OS version, memory and disk usage.
+
+   The agent calls `opensiterm open / send / read` itself. Logs go to `.opensiterm/logs/` in the
+   project directory you started Claude Code in.
+
+**Keep in mind:**
+
+- The default rules block flash erase, format, `rm -rf /` and the like, but not `reboot` or config
+  changes. Tell the agent up front what it may and may not do.
+- Claude Code asks you to approve every `opensiterm` command by default. To cut the prompts, allow
+  the everyday subcommands as shown under "Claude Code permissions" above; `unsafe-send` keeps asking.
+- With Codex, also register the MCP server: `codex mcp add opensiterm -- opensiterm mcp`. Use the
+  full path, such as `C:\Users\<you>\.local\bin\opensiterm.exe`, if it isn't on your PATH.
 
 ## Commands
 

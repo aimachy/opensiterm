@@ -77,12 +77,19 @@ opensiterm skill install   # 把 SKILL.md 复制到 ~/.claude/skills/ 和 ~/.age
 | **Claude Code** | 运行 `opensiterm skill install`；或者装插件：先 `/plugin marketplace add aimachy/opensiterm`，再 `/plugin install opensiterm@opensiterm` | 可选：`claude mcp add --transport stdio --scope user opensiterm -- opensiterm mcp` |
 | **Codex CLI** | 运行 `opensiterm skill install`（Codex 读取 `~/.agents/skills`） | **必须配置**：`codex mcp add opensiterm -- opensiterm mcp`（原因见下方说明） |
 | **opencode** | 自动读取 `~/.claude/skills` 或 `~/.agents/skills` | 在 `~/.config/opencode/opencode.json` 中加入：`{"mcp": {"opensiterm": {"type": "local", "command": ["opensiterm", "mcp"]}}}` |
-| **oh-my-pi** | 自动读取 `~/.agents/skills` 或 `~/.claude/skills` | 在 `~/.omp/agent/mcp.json` 中加入：`{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
-| **Gemini CLI / Antigravity** | 读取 `~/.agents/skills` | `gemini mcp add -s user opensiterm opensiterm mcp` |
-| **DeepSeek** | DeepSeek 官方推荐在 Claude Code、opencode 或 Codex 中使用其模型，按对应行配置即可 | DeepSeek Harness（`dsh`）支持在 Cordis 配置中添加 stdio MCP 服务，见其 MCP 文档 |
+| **pi** | `pi install git:github.com/aimachy/opensiterm` | 不需要：pi 本身不支持 MCP，通过 Skill 调用命令行 |
+| **oh-my-pi** | 先 `/marketplace add aimachy/opensiterm`，再 `omp plugin install opensiterm@opensiterm`（也会自动读取 `~/.agents/skills`） | 在 `~/.omp/agent/mcp.json` 中加入：`{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
+| **Gemini CLI** | `gemini extensions install https://github.com/aimachy/opensiterm`，以扩展形式一次装好 Skill 和 MCP | （已包含） |
+| **Qwen Code** | `qwen extensions install https://github.com/aimachy/opensiterm`（Qwen Code 会自动转换 Gemini 扩展） | （已包含） |
+| **Kimi Code CLI** | 自动读取 `~/.claude/skills` 或 `~/.agents/skills` | `kimi mcp add --transport stdio opensiterm -- opensiterm mcp` |
+| **Antigravity CLI**（`agy`） | `opensiterm skill install --target antigravity` | 在 `~/.gemini/config/mcp_config.json` 中加入：`{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
+| **Crush** | 自动读取 `~/.agents/skills` 或 `~/.claude/skills` | 在 `~/.config/crush/crushrc` 中加入：`mcp add opensiterm --command opensiterm --args mcp` |
+| **Grok Build**（xAI）、**ZCode**（智谱 Z.ai）、**DeepSeek Harness**（`dsh`） | 都支持 Agent Skills 和 MCP，按各自文档指向 `~/.agents/skills` 或添加 MCP 服务 | `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` 或该工具的等价写法 |
 | **聊天客户端**（Claude Desktop、Cherry Studio、Chatbox、Cursor 等） | 不适用 | `{"mcpServers": {"opensiterm": {"command": "opensiterm", "args": ["mcp"]}}}` |
 
 也可以用跨工具的 Skill 安装器：`npx skills add aimachy/opensiterm`。
+
+> **模型和工具的区别**：DeepSeek、Kimi、Qwen、GLM、Grok 是**模型**，真正操作串口的是运行它们的**工具**。上表中任何一个工具都可以换用任意模型。比如 DeepSeek、Kimi K2、GLM 都官方支持在 Claude Code、opencode 或 Codex 中使用，按对应工具那一行配置即可。
 
 > **Codex 用户注意**：在 Linux 和 macOS 上，Codex 的沙箱会对 shell 命令隐藏串口设备，并禁止访问本机网络，所以在沙箱里执行 `opensiterm` 命令会失败。MCP 服务运行在沙箱外面，因此请注册 MCP 服务，AI 会改用 `serial_*` 工具。
 
@@ -116,6 +123,33 @@ opensiterm close
 20:34:34.711 Linux buildroot 5.10.110 #1 SMP armv7l GNU/Linux
 20:34:34.712 ~ #
 ```
+
+## 使用示例：在 Claude Code 里调试一块板子
+
+1. **安装并接入**（只需一次）：
+
+   ```bash
+   uv tool install git+https://github.com/aimachy/opensiterm   # 或 pipx install git+https://...
+   opensiterm skill install     # Skill 装到 ~/.claude/skills/ 和 ~/.agents/skills/
+   ```
+
+   如果提示找不到 `opensiterm` 命令，执行 `uv tool update-shell`（或 `pipx ensurepath`）后重开终端。可执行文件在 `~/.local/bin/`，Windows 上是 `C:\Users\<用户名>\.local\bin\opensiterm.exe`。
+
+2. **重启 Claude Code**，开新终端和新会话，让 PATH 和 Skill 生效。
+
+3. **释放串口**：关掉其他串口终端软件（MobaXterm、PuTTY 等）对该串口的连接，因为串口同一时刻只能被一个程序占用。想自己实时看着，就在另一个终端运行 `opensiterm watch`。
+
+4. **直接用自然语言提需求**，例如：
+
+   > COM7 上接的是一块 Linux 板子，波特率 115200。帮我看一下系统版本、内存和磁盘使用情况。
+
+   AI 会自己调用 `opensiterm open / send / read`。日志保存在你启动 Claude Code 的项目目录下的 `.opensiterm/logs/` 里。
+
+**需要注意：**
+
+- 默认规则会拦截擦除 flash、格式化、`rm -rf /` 这类危险指令，但 `reboot`、修改配置之类的指令不会被拦。哪些操作允许做，最好在需求里先跟 AI 说清楚。
+- 每条 `opensiterm` 命令，Claude Code 默认都会弹窗请你审批。嫌烦的话，可以按上文“Claude Code 权限设置”只放行日常命令，`unsafe-send` 仍保留每次询问。
+- 改用 Codex 时，还需要注册 MCP：`codex mcp add opensiterm -- opensiterm mcp`。如果 `opensiterm` 不在 PATH 里，就写完整路径，如 `C:\Users\<用户名>\.local\bin\opensiterm.exe`。
 
 ## 命令一览
 

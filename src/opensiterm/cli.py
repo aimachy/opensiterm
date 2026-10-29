@@ -183,8 +183,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = add("skill", "show or install the Agent Skill (SKILL.md)")
     sp.add_argument("action", choices=("show", "path", "install"))
-    sp.add_argument("--target", action="append", choices=("claude", "agents"),
-                    help="claude = ~/.claude/skills, agents = ~/.agents/skills (default: both)")
+    sp.add_argument("--target", action="append", choices=("claude", "agents", "antigravity"),
+                    help="claude = ~/.claude/skills, agents = ~/.agents/skills, antigravity = "
+                         "~/.gemini/antigravity-cli/skills (default: claude + agents)")
     sp.add_argument("--project", action="store_true", help="install into this project instead of your home dir")
     sp.add_argument("--dest", help="install into this skills directory instead")
 
