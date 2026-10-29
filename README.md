@@ -57,6 +57,54 @@ you, in a terminal ────────────────────�
 - **Cross-platform.** Windows, macOS and Linux. Network serial (ser2net / RFC 2217) works through
   `socket://` and `rfc2217://`. The only dependency is pyserial.
 
+## Who is it for?
+
+**In short: anyone who debugs devices over a serial port can let an AI read the logs and type the
+commands.**
+
+### Main users
+
+| Who | Typical work | How OpenSiTerm helps |
+|---|---|---|
+| **MCU / embedded firmware engineers**<br>(STM32, ESP32, GD32, nRF, RT-Thread, FreeRTOS, Zephyr) | The edit, flash, read-logs loop; making sense of HardFault and assert dumps | The agent flashes its own changes, catches the boot log and judges the result, so you stop pasting logs; crash output is kept in full, with timestamps |
+| **Embedded Linux / BSP / driver engineers**<br>(U-Boot, kernel bring-up, Buildroot, Yocto, OpenWrt) | Boards that hang at boot, kernel panics, failed driver probes, U-Boot environment changes | Thousand-line boot logs reach the agent as head + tail, with the full log available to grep; U-Boot and Linux prompts are recognized; dangerous flash writes are blocked by default |
+| **Raspberry Pi / dev-board / maker users**<br>(Raspberry Pi, Arduino, ESP32, MicroPython) | Cryptic errors; no idea what the board is doing | Ask in plain language ("why does my board keep rebooting?") and the agent checks the port, queries the device and explains what it found |
+| **IoT / cellular-module engineers**<br>(4G/5G, NB-IoT, Wi-Fi, Bluetooth modules) | AT-command debugging: network registration, signal quality, connections | The agent knows the vendors' AT command sets and reads `OK`/`ERROR` itself, working through a back-and-forth; SIM PIN commands that can lock the card are blocked by default |
+| **Hardware engineers** | Powering up new boards: is the UART alive, did the system boot? | You don't need the software commands: describe what to check and the agent runs it |
+| **Test and production engineers** | Regression runs, overnight soak tests, checking several firmware versions | The agent can watch all night for `watchdog`, `panic` and the like; every line is timestamped and every action audited |
+| **Industrial automation engineers**<br>(Modbus RTU, RS-485, PLCs, meters) | Binary protocols, where hand-computed CRCs go wrong | Hex in and out, with CRCs computed and verified by the tool; the agent only writes the frame contents |
+| **Network engineers** | Configuring switches and routers through the console port | The agent sends the configuration line by line and checks each echo |
+| **FAEs / technical support** | Reproducing customer issues and collecting logs | Debug boards attached to another machine (ser2net / RFC 2217) and hand complete logs to R&D |
+| **Teachers and students** | Stuck on "why doesn't the serial port answer?" | The agent explains against the real output: wrong baud rate, wrong line ending, TX/RX swapped |
+| **Robotics and drone developers** | Serial protocols of flight controllers, motor drivers and sensors | Binary mode, frames split on time gaps, several ports at once |
+
+### The pain they share
+
+1. **Copying logs is tedious.** Serial output has to be pasted into the chat piece by piece before an
+   AI can see it, and the crucial lines are always the ones that get missed.
+2. **The port is exclusive.** An agent and your own terminal program can't open the same port.
+3. **The AI can't see timing.** When the device rebooted, or how long passed between two lines,
+   is lost in pasted text.
+4. **Fear of the AI breaking something.** Some mistakes on real hardware can't be undone.
+
+How OpenSiTerm deals with each:
+
+- a background session records everything, so the agent sees all the output itself;
+- `watch` lets you and the agent share one port;
+- every line carries a millisecond timestamp;
+- dangerous commands are blocked by default, and every action is audited.
+
+### Not a good fit
+
+- **It is not a JTAG/SWD debugger.** For breakpoints, single-stepping or reading memory, use OpenOCD,
+  J-Link or GDB. OpenSiTerm only handles serial ports.
+- **Not supported yet:** CAN bus, J-Link RTT, and signal-level work such as logic analyzers or
+  oscilloscopes.
+- **Not for high-speed data streams**, such as sustained multi-MB/s acquisition. It is built for
+  debugging-scale traffic; the in-memory buffer defaults to 8 MB.
+- **Don't let it run production equipment or dangerous machinery unattended.** The safety rules
+  catch an agent's slips; they don't replace human supervision.
+
 ## Install
 
 **With Python 3.9+** (recommended):
