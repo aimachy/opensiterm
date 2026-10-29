@@ -1,0 +1,14 @@
+{
+  "name": "opensiterm",
+  "description": "Serial port access for AI agents: the OpenSiTerm Agent Skill for Claude Code",
+  "owner": {
+    "name": "OpenSiTerm contributors"
+  },
+  "plugins": [
+    {
+      "name": "opensiterm",
+      "source": "./",
+      "description": "Teaches Claude Code to read and write serial ports (UART/COM/tty) with the opensiterm CLI for hardware debugging. Requires the opensiterm CLI (pipx install opensiterm, or a release binary)."
+    }
+  ]
+}

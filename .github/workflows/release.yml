@@ -1,0 +1,74 @@
+name: Release
+
+# Push a tag like v0.1.0 to build single-file executables and attach them to a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  binaries:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: opensiterm-windows-x64.exe
+          - os: ubuntu-22.04          # older glibc = runs on more distros
+            asset: opensiterm-linux-x64
+          - os: macos-latest
+            asset: opensiterm-macos-arm64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install . pyinstaller
+      - name: Build
+        shell: bash
+        run: |
+          SEP=$(python -c "import os; print(os.pathsep)")
+          pyinstaller --onefile --name opensiterm --collect-submodules serial \
+            --add-data "skills/opensiterm/SKILL.md${SEP}opensiterm/_skill" packaging/entry.py
+          if [ -f dist/opensiterm.exe ]; then mv dist/opensiterm.exe "dist/${{ matrix.asset }}"; else mv dist/opensiterm "dist/${{ matrix.asset }}"; fi
+      - name: Smoke test
+        shell: bash
+        run: |
+          ./dist/${{ matrix.asset }} --version
+          ./dist/${{ matrix.asset }} skill path
+          ./dist/${{ matrix.asset }} open loop:// --name ci
+          ./dist/${{ matrix.asset }} send "hello"
+          ./dist/${{ matrix.asset }} close --all
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/${{ matrix.asset }}
+
+  python-dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install build && python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python-dist
+          path: dist/*
+
+  release:
+    needs: [binaries, python-dist]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true

@@ -1,0 +1,7 @@
+{
+  "name": "opensiterm",
+  "description": "Read and write serial ports (UART/COM/tty) for hardware debugging through the opensiterm CLI: device logs, MCU shells, AT modems, Linux/U-Boot consoles, Modbus.",
+  "license": "MIT",
+  "repository": "https://github.com/aimachy/opensiterm",
+  "keywords": ["serial", "uart", "embedded", "hardware", "debugging"]
+}
